@@ -1,0 +1,63 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: acala-master
+  namespace: monitoring
+  labels:
+    name: acala-master
+spec:
+  selector:
+    app: acala-master
+  type: NodePort
+  ports:
+  - name: acala-gateway
+    protocol: TCP
+    port: 9091
+    nodePort: 30901
+  - name: acala-master
+    protocol: TCP
+    port: 54088
+    nodePort: 31000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: acala-master
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: acala-master
+  template:
+    metadata:
+      name: acala-master
+      labels:
+        app: acala-master
+    spec:
+      containers:
+      - name: acala-gateway
+        image: prom/pushgateway:v1.4.2
+        ports:
+        - name: acala-gateway
+          containerPort: 9091
+      - name: acala-controller
+        image: chuangtw/acalacontroller:latest
+        imagePullPolicy: Always
+        volumeMounts:
+        - mountPath: /root/.kube/config
+          name: kube-config
+        - mountPath: /root/member
+          name: member
+        ports:
+        - name: acala
+          containerPort: 54088
+      volumes:
+      - name: kube-config
+        hostPath:
+          path: /root/.kube/config
+          type: File
+      - name: member
+        hostPath:
+          path: /root/member
+          type: File

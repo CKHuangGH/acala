@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: acala-member
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: acala-member
+  template:
+    metadata:
+      name: acala-member
+      labels:
+        app: acala-member
+    spec:
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      tolerations:
+      - key: "node-role.kubernetes.io/master"
+        operator: "Equal"
+        effect: "NoSchedule"
+      containers:
+      - name: acala-member
+        image: chuangtw/acalamember:latest
+        imagePullPolicy: Always
+        volumeMounts:
+        - mountPath: /root/.kube/config
+          name: kube-config
+        ports:
+        - name: acala-member
+          containerPort: 54088
+      volumes:
+      - name: kube-config
+        hostPath:
+          path: /root/.kube/config
+          type: File
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: acala-member
+  namespace: monitoring
+  labels:
+    name: acala-member
+spec:
+  selector:
+    app: acala-member
+  type: NodePort
+  ports:
+  - name: acala-member
+    protocol: TCP
+    port: 54088
+    nodePort: 31580
