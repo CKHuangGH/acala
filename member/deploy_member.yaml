@@ -27,6 +27,10 @@ spec:
         volumeMounts:
         - mountPath: /root/.kube/config
           name: kube-config
+        resources:
+          requests:
+            cpu: 100m
+            memory: 200Mi
         ports:
         - name: acala-member
           containerPort: 54088
