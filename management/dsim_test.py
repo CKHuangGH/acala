@@ -118,14 +118,16 @@ def getresources(mode):
     prom_url = "http://" + str(prom_host) + ":" + str(prom_port)
     getcurrentclusters()
     pc = PrometheusConnect(url=prom_url, disable_ssl=True)
-
+    print(clusters)
     for cluster in clusters:
         if mode == "CPU" or mode == 'cpu':
             query="(avg(instance:node_cpu_utilisation:rate5m{cluster_name='" + cluster + "'})*100)"
             result = pc.custom_query(query=query)
             if len(result) > 0:
                 resources[cluster] = float(result[0]['value'][1])
-                decidetime(cluster)
+                print(result)
+                print(resources)
+                #decidetime(cluster)
         elif mode == "Memory" or mode == 'memory':
             query="(avg(instance:node_memory_utilisation:ratio{cluster_name='" + cluster + "'})*100)"
             result = pc.custom_query(query=query)
@@ -143,13 +145,13 @@ def getformule(minlevel, timemax, maxlevel, timemin):
     b=(float(timemax)-(m*float(minlevel)))
 
 if __name__ == "__main__":
-    minlevel = sys.argv[1]
-    timemax = sys.argv[2]
-    maxlevel = sys.argv[3]
-    timemin = sys.argv[4]
-    checktime = sys.argv[5]
-    resourcetype = sys.argv[6]
-    getformule(minlevel, timemax, maxlevel, timemin)
-    while 1:
-        getresources(resourcetype)
-        time.sleep(int(checktime))
+    # minlevel = sys.argv[1]
+    # timemax = sys.argv[2]
+    # maxlevel = sys.argv[3]
+    # timemin = sys.argv[4]
+    # checktime = sys.argv[5]
+    # resourcetype = sys.argv[6]
+    #getformule(minlevel, timemax, maxlevel, timemin)
+    #while 1:
+    getresources("cpu")
+        #time.sleep(int(checktime))
