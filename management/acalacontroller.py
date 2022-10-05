@@ -177,6 +177,7 @@ if __name__ == "__main__":
     perpareend = time.perf_counter()
     timewriter("perpare" + " " + str(perpareend-perparestart))
     while True:
+        totaltimestart = time.perf_counter()
         for k in ipdict.keys():
             timedict[k]=timedict[k]-1
             if timedict[k]<=0:
@@ -208,4 +209,6 @@ if __name__ == "__main__":
                     timewriter("total" + str(k) + " " + str(end-start))
                 except:
                     print("Wait for member "+ k)
+        totaltimeend = time.perf_counter()
+        timewriter("onescrapetotaltime" + " " + str(totaltimeend-totaltimestart))
         time.sleep(1)
