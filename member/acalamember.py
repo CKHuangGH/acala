@@ -102,10 +102,11 @@ def gettargets(prom_host):
     prom_header = {'Accept-Encoding': 'gzip'}
     r = requests.get(url=prom_url,headers=prom_header)
     data = r.json()
+    nomaster=str(prom_host) +":9100"
     scrapeurl = []
     for item in data["data"]["activeTargets"]:
         if item["labels"]["job"] == "node-exporter":
-            if item["labels"]["instance"] != "10.158.4.2:9100":
+            if item["labels"]["instance"] != nomaster:
                 scrapeurl.append(item["scrapeUrl"])
     end = time.perf_counter()
     timewriter("gettargets" + " " + str(end-start))
