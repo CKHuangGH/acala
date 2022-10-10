@@ -9,6 +9,8 @@ import kubernetes.client
 import base64
 import yaml
 import logging
+from aiohttp import ClientSession
+import asyncio
 
 
 ipdict={}
@@ -16,7 +18,7 @@ portdict={}
 timedict={}
 resources = {}
 scrapetime = {}
-
+scrapelist=[]
 timeout_seconds = 30
 
 logging.basicConfig(level=logging.INFO)
@@ -50,19 +52,19 @@ def timewriter(text):
     except:
         print("Write error")
 
-def decompressfile():
+def decompressfile(name,nameup):
     start = time.perf_counter()
-    with gzip.open('after.gz', 'rb') as f_in, open('after', 'wb') as f_out:
+    with gzip.open(name, 'rb') as f_in, open(nameup, 'wb') as f_out:
         shutil.copyfileobj(f_in, f_out)
     end = time.perf_counter()
     timewriter("decompressfile" + " " + str(end-start))
 
-def posttogateway(clustername,instance):
+def posttogateway(clustername,instance, name):
     start = time.perf_counter()
     gateway_host="127.0.0.1"
     gateway_port="9091"
     url = "http://" + str(gateway_host) + ":" + str(gateway_port) + "/metrics/job/" + clustername + "/instance/" + instance
-    res = requests.post(url=url,data=open('after', 'rb'),headers={'Content-Type': 'application/octet-stream'})
+    res = requests.post(url=url,data=open(name, 'rb'),headers={'Content-Type': 'application/octet-stream'})
     end = time.perf_counter()
     timewriter("posttogateway" + " " + str(end-start))
 
@@ -110,6 +112,7 @@ def read_member_cluster():
     f = open("/root/member", 'r')
     for line in f.readlines():
         ip, port, cluster=parse_ip_port_name(line)
+        scrapelist.append(ip)
         ipdict[cluster]=ip
         portdict[cluster]=port
         timedict[cluster]=0
@@ -167,6 +170,24 @@ def modifyconfig():
     code=encodedStr
     updateSecret(code)
 
+async def fetch(link, clientMessage, number):
+    print('Send: %r' % clientMessage)
+    reader, writer = await asyncio.open_connection(link, 31580)
+    writer.write(clientMessage.encode())
+    #client.sendall(clientMessage.encode())
+    fname = "after" + str(number) + ".gz"
+    with open(fname, "wb") as f:
+        while True:
+            bytes_read = await reader.read(BUFFER_SIZE)
+            if not bytes_read:    
+                break
+            f.write(bytes_read)
+            writer.close()
+
+async def tcp_echo_client(links,clientMessage):
+    tasks = [asyncio.create_task(fetch(link, clientMessage, links.index(link))) for link in links]
+    await asyncio.gather(*tasks)
+
 if __name__ == "__main__":
     perparestart = time.perf_counter()
     minlevel, timemax, maxlevel, timemin=20,60,40,5
@@ -178,37 +199,19 @@ if __name__ == "__main__":
     timewriter("perpare" + " " + str(perpareend-perparestart))
     while True:
         totaltimestart = time.perf_counter()
-        for k in ipdict.keys():
-            timedict[k]=timedict[k]-1
-            if timedict[k]<=0:
-                start = time.perf_counter()
-                HOST=ipdict[k]
-                PORT=portdict[k]
-                clustername=k
-                try:
-                    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    client.connect((HOST, PORT))
-                    client.sendall(clientMessage.encode())
-                    with open("after.gz", "wb") as f:
-                        while True:
-                            bytes_read = client.recv(BUFFER_SIZE)
-                            if not bytes_read:    
-                                break
-                            f.write(bytes_read)
-                    client.close()
-                    decompressfile()
-                    try:
-                        posttogateway(clustername,HOST)
-                        clientMessage = "rntsm"
-                    except:
-                        clientMessage = "rntsm:1"
-                    #getresources("CPU",k)
-                    #decidetime(k, minlevel, timemax, maxlevel, timemin)
-                    timedict[k]=5
-                    end = time.perf_counter()
-                    timewriter("total" + str(k) + " " + str(end-start))
-                except:
-                    print("Wait for member "+ k)
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(tcp_echo_client(scrapelist,clientMessage))
+        for number in range(len(scrapelist)):
+            name= "after" + str(number)+".gz"
+            nameup="after"+ str(number)
+            decompressfile(name,nameup)
+            whichone=number+1
+            clustername="cluster"+str(whichone)
+            try:
+                posttogateway(clustername,ipdict[clustername],nameup)
+                clientMessage = "rntsm"
+            except:
+                clientMessage = "rntsm:1"
         totaltimeend = time.perf_counter()
         timewriter("onescrapetotaltime" + " " + str(totaltimeend-totaltimestart))
-        time.sleep(1)
+        time.sleep(5)
