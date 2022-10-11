@@ -197,21 +197,24 @@ if __name__ == "__main__":
     BUFFER_SIZE=8192
     perpareend = time.perf_counter()
     timewriter("perpare" + " " + str(perpareend-perparestart))
+    loop = asyncio.get_event_loop()
     while True:
-        totaltimestart = time.perf_counter()
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(tcp_echo_client(scrapelist,clientMessage))
-        for number in range(len(scrapelist)):
-            name= "after" + str(number)+".gz"
-            nameup="after"+ str(number)
-            decompressfile(name,nameup)
-            whichone=number+1
-            clustername="cluster"+str(whichone)
-            try:
-                posttogateway(clustername,ipdict[clustername],nameup)
-                clientMessage = "rntsm"
-            except:
-                clientMessage = "rntsm:1"
-        totaltimeend = time.perf_counter()
-        timewriter("onescrapetotaltime" + " " + str(totaltimeend-totaltimestart))
+        try:
+            totaltimestart = time.perf_counter()
+            loop.run_until_complete(tcp_echo_client(scrapelist,clientMessage))
+            for number in range(len(scrapelist)):
+                name= "after" + str(number)+".gz"
+                nameup="after"+ str(number)
+                decompressfile(name,nameup)
+                whichone=number+1
+                clustername="cluster"+str(whichone)
+                try:
+                    posttogateway(clustername,ipdict[clustername],nameup)
+                    clientMessage = "rntsm"
+                except:
+                    clientMessage = "rntsm:1"
+            totaltimeend = time.perf_counter()
+            timewriter("onescrapetotaltime" + " " + str(totaltimeend-totaltimestart))
+        except:
+            print("failed")
         time.sleep(5)
