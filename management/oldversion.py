@@ -20,6 +20,7 @@ resources = {}
 scrapetime = {}
 scrapelist=[]
 timeout_seconds = 30
+
 logging.basicConfig(level=logging.INFO)
 
 def getControllerMasterIP():
@@ -171,7 +172,6 @@ def modifyconfig():
 
 async def fetch(link, clientMessage, number):
     print('Send: %r' % clientMessage)
-    transtimestart = time.perf_counter()
     reader, writer = await asyncio.open_connection(link, 31580)
     writer.write(clientMessage.encode())
     #client.sendall(clientMessage.encode())
@@ -183,46 +183,38 @@ async def fetch(link, clientMessage, number):
                 break
             f.write(bytes_read)
             writer.close()
-    name= "after" + str(number)+".gz"
-    nameup="after"+ str(number)
-    transtimeend = time.perf_counter()
-    timewriter("scrape" + " " + str(transtimeend-transtimestart))
-    decompressfile(name,nameup)
-    whichone=number+1
-    clustername="cluster"+str(whichone)
-    try:
-        posttogateway(clustername,ipdict[clustername],nameup)
-    except:
-        print("post-fail")
-        return "post-fail"
-        
 
 async def tcp_echo_client(links,clientMessage):
-    tasks = [asyncio.create_task(fetch(link, clientMessage,links.index(link))) for link in links]
-    try:
-        fail=await asyncio.gather(*tasks)
-        if fail[0]=="post-fail":
-            return "rntsm:1"
-        else:
-            return "rntsm"
-    except:
-        print("oneofthem-fail")    
-        return "rntsm"
+    tasks = [asyncio.create_task(fetch(link, clientMessage, links.index(link))) for link in links]
+    await asyncio.gather(*tasks)
 
 if __name__ == "__main__":
     perparestart = time.perf_counter()
     minlevel, timemax, maxlevel, timemin=20,60,40,5
     read_member_cluster()
     getformule(minlevel, timemax, maxlevel, timemin)
+    clientMessage = "rntsm:1"
     BUFFER_SIZE=8192
     perpareend = time.perf_counter()
     timewriter("perpare" + " " + str(perpareend-perparestart))
-    clientMessage = "rntsm:1"
     loop = asyncio.get_event_loop()
     while True:
-        print(clientMessage)
-        totaltimestart = time.perf_counter()
-        clientMessage=loop.run_until_complete(tcp_echo_client(scrapelist,clientMessage))
-        totaltimeend = time.perf_counter()
-        timewriter("onescrapetotaltime" + " " + str(totaltimeend-totaltimestart))
+        try:
+            totaltimestart = time.perf_counter()
+            loop.run_until_complete(tcp_echo_client(scrapelist,clientMessage))
+            for number in range(len(scrapelist)):
+                name= "after" + str(number)+".gz"
+                nameup="after"+ str(number)
+                decompressfile(name,nameup)
+                whichone=number+1
+                clustername="cluster"+str(whichone)
+                try:
+                    posttogateway(clustername,ipdict[clustername],nameup)
+                    clientMessage = "rntsm"
+                except:
+                    clientMessage = "rntsm:1"
+            totaltimeend = time.perf_counter()
+            timewriter("onescrapetotaltime" + " " + str(totaltimeend-totaltimestart))
+        except:
+            print("failed")
         time.sleep(5)
