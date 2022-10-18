@@ -1,3 +1,4 @@
+from statistics import mean
 from kubernetes import config
 import kubernetes.client
 import requests
@@ -8,6 +9,7 @@ import shutil
 import logging
 from aiohttp import ClientSession
 import asyncio
+import numpy as np
 
 
 timeout_seconds = 30
@@ -81,7 +83,7 @@ def parsevalue(textline):
     else:
         parseddata = origdata.split(" ")
 
-    return str(parseddata[1])
+    return float(parseddata[1])
 
 def parsename(textline):
     origdata = textline.strip('\n')
@@ -136,26 +138,22 @@ async def fetch(link, session,number):
     except:
         print("get metrics failed")
 
-
 async def asyncgetmetrics(links):
     async with ClientSession() as session:
         tasks = [asyncio.create_task(fetch(link, session, links.index(link))) for link in links]  # 建立任務清單
         await asyncio.gather(*tasks)
 
-def merge(path):
+def merge(path,counter):
     start = time.perf_counter()
     f = open(path, 'r')
     global maindict
     global timesdict
     global checklist
     counterformetrics = 1
-    valuelist = []
-    metricsname = []
     tempdict = {}
     helplistappend = helplist.append
     checklistappend = checklist.append
-    valuelistappend = valuelist.append
-    metricsnameappend = metricsname.append
+    tempdict=maindict.copy()
     for line in f.readlines():
         if line[0] == "#":
             if counterformetrics % 2 == 0:
@@ -164,22 +162,19 @@ def merge(path):
                     checklistappend(parseforstrhelp(line))
             counterformetrics += 1
         else:
-            valuelistappend(parsevalue(line))
-            metricsnameappend(parsename(line))
-
-    if not maindict:
-        maindict = dict(zip(metricsname, valuelist))
-        for k in maindict.keys():
-            timesdict.setdefault(k, 1.0)
-    else:
-        tempdict = dict(zip(metricsname, valuelist))
-        for k, v in tempdict.items():
-            if k in maindict.keys():
-                maindict[k] = float(maindict[k])+float(v)
-                timesdict[k] = float(timesdict[k]) + 1.0
+            value=parsevalue(line)
+            metricsname=parsename(line)
+            checksame=0
+            if counter==0:
+                maindict.setdefault(metricsname,[]).append(value)
+                #print(maindict)
             else:
-                maindict[k] = float(v)
-                timesdict.setdefault(k, 1.0)
+                for k in tempdict.items():
+                    if metricsname==k:
+                        checksame=1
+                        maindict[k].append(value)
+                if checksame==0:
+                    maindict.setdefault(metricsname,[]).append(value)
     f.close()
     end = time.perf_counter()
     timewriter("merge" + " " + str(end-start))
@@ -187,8 +182,8 @@ def merge(path):
 def calcavg():
     start = time.perf_counter()
     for k in maindict.keys():
-        if k in timesdict.keys():
-            maindict[k] = float(maindict[k])/float(timesdict[k])
+        print(k,maindict[k],round(np.mean(maindict[k]),5)) #平均數
+        print(round(np.nan_to_num(round(np.std(maindict[k]),5)/round(np.mean(maindict[k]),5)),5)) #變異係數
     end = time.perf_counter()
     timewriter("calcavg" + " " + str(end-start))
 
@@ -331,56 +326,62 @@ if __name__ == "__main__":
     timewriter("perpare"+ " "+ str(perpareend - perparestart))
     while True:
         print("Server start")
-        conn, addr = server.accept()
-        clientMessage = str(conn.recv(1024), encoding='utf-8')
+        #conn, addr = server.accept()
+        #clientMessage = str(conn.recv(1024), encoding='utf-8')
         start = time.perf_counter()
         loop = asyncio.get_event_loop()
+        clientMessage="rntsm"
         if clientMessage == "rntsm":
             metricsstart = time.perf_counter()
             loop.run_until_complete(asyncgetmetrics(scrapeurl))
             metricsend = time.perf_counter()
             timewriter("getmetrics"+ " "+ str(metricsend-metricsstart))
-            for number in range(lenoftarget):
-                #getmetrics(url)
+            counter=0
+            for number in range(3):
                 name= "before" + str(number)
-                merge(name)
-            calcavg()
-            rebuildfile(clv)
+                merge(name,counter)
+                counter+=1
+            calcavg()    
+            #print(maindict)
             initmemory()
-            compressfile()
-            sendstart = time.perf_counter()
-            with open("after.gz", "rb") as f:
-                while True:
-                    bytes_read = f.read(BUFFER_SIZE)
-                    if not bytes_read:
-                        break
-                    conn.sendall(bytes_read)
-            end = time.perf_counter()
-            conn.close()
-            timewriter("send"+ " " + str(end-sendstart))
-            timewriter("total"+ " " + str(end-start))
-        elif clientMessage == "rntsm:1":
-            lastmaindict.clear()
-            metricsstart = time.perf_counter()
-            loop.run_until_complete(asyncgetmetrics(scrapeurl))
-            metricsend = time.perf_counter()
-            timewriter("getmetrics"+ " "+ str(metricsend-metricsstart))
-            for number in range(lenoftarget):
-                #getmetrics(url)
-                name= "before" + str(number)
-                merge(name)
-            calcavg()
-            rebuildfile(clv)
-            initmemory()
-            compressfile()
-            sendstart = time.perf_counter()
-            with open("after.gz", "rb") as f:
-                while True:
-                    bytes_read = f.read(BUFFER_SIZE)
-                    if not bytes_read:
-                        break
-                    conn.sendall(bytes_read)
-            end = time.perf_counter()
-            conn.close()
-            timewriter("send"+ " " + str(end-sendstart))
-            timewriter("total"+ " " + str(end-start))
+            time.sleep(5)
+        #     calcavg()
+        #     rebuildfile(clv)
+        #     initmemory()
+        #     compressfile()
+        #     sendstart = time.perf_counter()
+        #     with open("after.gz", "rb") as f:
+        #         while True:
+        #             bytes_read = f.read(BUFFER_SIZE)
+        #             if not bytes_read:
+        #                 break
+        #             conn.sendall(bytes_read)
+        #     end = time.perf_counter()
+        #     conn.close()
+        #     timewriter("send"+ " " + str(end-sendstart))
+        #     timewriter("total"+ " " + str(end-start))
+        # elif clientMessage == "rntsm:1":
+        #     lastmaindict.clear()
+        #     metricsstart = time.perf_counter()
+        #     loop.run_until_complete(asyncgetmetrics(scrapeurl))
+        #     metricsend = time.perf_counter()
+        #     timewriter("getmetrics"+ " "+ str(metricsend-metricsstart))
+        #     for number in range(lenoftarget):
+        #         #getmetrics(url)
+        #         name= "before" + str(number)
+        #         merge(name)
+        #     calcavg()
+        #     rebuildfile(clv)
+        #     initmemory()
+        #     compressfile()
+        #     sendstart = time.perf_counter()
+        #     with open("after.gz", "rb") as f:
+        #         while True:
+        #             bytes_read = f.read(BUFFER_SIZE)
+        #             if not bytes_read:
+        #                 break
+        #             conn.sendall(bytes_read)
+        #     end = time.perf_counter()
+        #     conn.close()
+        #     timewriter("send"+ " " + str(end-sendstart))
+        #     timewriter("total"+ " " + str(end-start))
