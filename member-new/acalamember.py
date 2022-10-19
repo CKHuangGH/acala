@@ -1,4 +1,3 @@
-from statistics import mean
 from kubernetes import config
 import kubernetes.client
 import requests
@@ -85,7 +84,7 @@ def parsevalue(textline):
 
     return float(parseddata[1])
 
-def parsename(textline):
+def parsename(textline)
     origdata = textline.strip('\n')
     if "}" in origdata:
         firstparse = origdata.split("}")
@@ -131,12 +130,13 @@ async def fetch(link, session,number):
     #try:
     async with session.get(link) as response:
         html_body = await response.text()
-        #for line in html_body.splitlines():
-            #mergebyline(line)
-        fname = "before" + str(number)
-        f = open(fname, 'w')
-        f.write(html_body)
-        f.close
+        # for line in html_body.splitlines():
+        #     mergebyline(line)
+        # fname = "before" + str(number)
+        # f = open(fname, 'w')
+        # f.write(html_body)
+        # f.close
+        mergesametime(html_body)
     #except:
         #print("get metrics failed")
 
@@ -170,6 +170,47 @@ def mergebyline(line):
         if checksame==0:
             maindict.setdefault(metricsname,[]).append(value)
 
+def mergesametime(html_body):
+    start = time.perf_counter()
+    #f = open(path, 'r')
+    global maindict
+    global checklist
+    counterformetrics = 1
+    valuelist = []
+    metricsname = []
+    tempdict = {}
+    helplistappend = helplist.append
+    checklistappend = checklist.append
+    valuelistappend = valuelist.append
+    metricsnameappend = metricsname.append
+    
+    if not maindict:
+        number=0
+    else:
+        number=1
+
+    for line in html_body.splitlines():
+        if line[0] == "#":
+            if counterformetrics % 2 == 0:
+                if line not in helplist:
+                    helplistappend(line)
+                    checklistappend(parseforstrhelp(line))
+            counterformetrics += 1
+        else:
+            if number==0:
+                maindict.setdefault(parsename(line),[]).append(parsevalue(line))
+            else:
+                valuelistappend(parsevalue(line))
+                metricsnameappend(parsename(line))
+
+    if number!=0:
+        tempdict = dict(zip(metricsname, valuelist))
+        for k, value in tempdict.items():
+            if k in maindict.keys():
+                maindict[k].append(value)
+            else:
+                maindict.setdefault(k,[]).append(value)
+    #.close()
 def merge(path,counter):
     start = time.perf_counter()
     f = open(path, 'r')
@@ -193,24 +234,20 @@ def merge(path,counter):
                     checklistappend(parseforstrhelp(line))
             counterformetrics += 1
         else:
-            if not maindict:
+            if counter==0:
                 maindict.setdefault(parsename(line),[]).append(parsevalue(line))
             else:
                 valuelistappend(parsevalue(line))
                 metricsnameappend(parsename(line))
-                
-    tempdict = dict(zip(metricsname, valuelist))
-
-        #maindict = dict(zip(metricsname, valuelist))
-    else:
+    
+    if counter!=0:
+        tempdict = dict(zip(metricsname, valuelist))
         for k, value in tempdict.items():
             if k in maindict.keys():
-                checksame=1
                 maindict[k].append(value)
             else:
                 maindict.setdefault(k,[]).append(value)
-                
-
+        #maindict = dict(zip(metricsname, valuelist))
     
             #tempdict = dict(zip(metricsname, valuelist))
             # for k in metricsname:
@@ -369,12 +406,11 @@ def compressfile():
 
 if __name__ == "__main__":
     perparestart = time.perf_counter()
-
     prom_host=getControllerMasterIP()
     scrapeurl=gettargets(prom_host)
     lenoftarget=len(scrapeurl)
     clv=1
-
+    print(scrapeurl)
     BUFFER_SIZE = 8192
     HOST = '0.0.0.0'
     PORT = 54088
@@ -395,15 +431,14 @@ if __name__ == "__main__":
             metricsstart = time.perf_counter()
             loop.run_until_complete(asyncgetmetrics(scrapeurl))
             metricsend = time.perf_counter()
-            timewriter("getmetrics"+ " "+ str(metricsend-metricsstart))
-            counter=0
-            for number in range(5):
-                name= "before" + str(number)
-                merge(name,counter)
-                counter+=1
+            print(metricsend-metricsstart)
+            timewriter("getmetricsandmerge"+ " "+ str(metricsend-metricsstart))
+            # counter=0
+            # for number in range(lenoftarget):
+            #     name= "before" + str(number)
+            #     merge(name,counter)
+            #     counter+=1
             print(maindict)
-            # calcavg()    
-            #print(maindict)
             initmemory()
             time.sleep(5)
         #     calcavg()
