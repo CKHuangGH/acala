@@ -128,20 +128,47 @@ def getmetrics(url):
     timewriter("getmetrics" + " " + str(end-start))
 
 async def fetch(link, session,number):
-    try:
-        async with session.get(link) as response:
-            html_body = await response.text()
-            fname = "before" + str(number)
-            f = open(fname, 'w')
-            f.write(html_body)
-            f.close
-    except:
-        print("get metrics failed")
+    #try:
+    async with session.get(link) as response:
+        html_body = await response.text()
+        #for line in html_body.splitlines():
+            #mergebyline(line)
+        fname = "before" + str(number)
+        f = open(fname, 'w')
+        f.write(html_body)
+        f.close
+    #except:
+        #print("get metrics failed")
 
 async def asyncgetmetrics(links):
     async with ClientSession() as session:
         tasks = [asyncio.create_task(fetch(link, session, links.index(link))) for link in links]  # 建立任務清單
         await asyncio.gather(*tasks)
+
+def mergebyline(line):
+    global maindict
+    global checklist
+    tempdict = {}
+    counterformetrics = 1
+    helplistappend = helplist.append
+    checklistappend = checklist.append
+    tempdict=maindict.copy()
+    if line[0] == "#":
+        if counterformetrics % 2 == 0:
+            if line not in helplist:
+                helplistappend(line)
+                checklistappend(parseforstrhelp(line))
+        counterformetrics += 1
+    else:
+        value=parsevalue(line)
+        metricsname=parsename(line)
+        checksame=0
+        for k in tempdict.items():
+            if metricsname==k:
+                checksame=1
+                maindict[k].append(value)
+        if checksame==0:
+            maindict.setdefault(metricsname,[]).append(value)
 
 def merge(path,counter):
     start = time.perf_counter()
@@ -150,10 +177,14 @@ def merge(path,counter):
     global timesdict
     global checklist
     counterformetrics = 1
+    valuelist = []
+    metricsname = []
     tempdict = {}
     helplistappend = helplist.append
     checklistappend = checklist.append
-    tempdict=maindict.copy()
+    valuelistappend = valuelist.append
+    metricsnameappend = metricsname.append
+    #tempdict=maindict.copy()
     for line in f.readlines():
         if line[0] == "#":
             if counterformetrics % 2 == 0:
@@ -162,20 +193,49 @@ def merge(path,counter):
                     checklistappend(parseforstrhelp(line))
             counterformetrics += 1
         else:
-            value=parsevalue(line)
-            metricsname=parsename(line)
-            checksame=0
-            if counter==0:
-                maindict.setdefault(metricsname,[]).append(value)
-                #print(maindict)
+            if not maindict:
+                maindict.setdefault(parsename(line),[]).append(parsevalue(line))
             else:
-                for k in tempdict.items():
-                    if metricsname==k:
-                        checksame=1
-                        maindict[k].append(value)
-                if checksame==0:
-                    maindict.setdefault(metricsname,[]).append(value)
-    f.close()
+                valuelistappend(parsevalue(line))
+                metricsnameappend(parsename(line))
+                
+    tempdict = dict(zip(metricsname, valuelist))
+
+        #maindict = dict(zip(metricsname, valuelist))
+    else:
+        for k, value in tempdict.items():
+            if k in maindict.keys():
+                checksame=1
+                maindict[k].append(value)
+            else:
+                maindict.setdefault(k,[]).append(value)
+                
+
+    
+            #tempdict = dict(zip(metricsname, valuelist))
+            # for k in metricsname:
+            #     if k in maindict.keys():
+            #         maindict[k].append(value)
+            # for k,value in tempdict.items():
+
+                    #maindict.setdefault(k,[]).append(value)
+
+
+            # value=parsevalue(line)
+            # metricsname=parsename(line)
+            # checksame=0
+            # if counter==0:
+            #     maindict.setdefault(metricsname,[]).append(value)
+            #     #print(maindict)
+            # else:
+            #     for k in tempdict.items():
+            #         if metricsname==k:
+            #             checksame=1
+            #             maindict[k].append(value)
+            #             break
+            #     if checksame==0:
+            #         maindict.setdefault(metricsname,[]).append(value)
+    # f.close()
     end = time.perf_counter()
     timewriter("merge" + " " + str(end-start))
 
@@ -337,11 +397,12 @@ if __name__ == "__main__":
             metricsend = time.perf_counter()
             timewriter("getmetrics"+ " "+ str(metricsend-metricsstart))
             counter=0
-            for number in range(3):
+            for number in range(5):
                 name= "before" + str(number)
                 merge(name,counter)
                 counter+=1
-            calcavg()    
+            print(maindict)
+            # calcavg()    
             #print(maindict)
             initmemory()
             time.sleep(5)
