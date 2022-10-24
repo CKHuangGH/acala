@@ -1,3 +1,4 @@
+from cmath import isnan
 from kubernetes import config
 import kubernetes.client
 import requests
@@ -9,28 +10,25 @@ import logging
 from aiohttp import ClientSession
 import asyncio
 import numpy as np
+import statistics
 
 
 timeout_seconds = 30
 maindict = {}
-timesdict = {}
+averagemaindict = {}
+cvmaindict = {}
 helplist = []
 checklist = []
 lastmaindict = {}
 
+
 logging.basicConfig(level=logging.INFO)
 
 def timewriter(text):
-    try:
-        f = open("exectime", 'a')
-    except:
-        print("Open exectime failed")
-    try:
-        f.write(text)
-        f.write("\n")
-        f.close
-    except:
-        print("Write error")
+    f = open("exectime", 'a')
+    f.write(text)
+    f.write("\n")
+    f.close
 
 def getControllerMasterIP():
     config.load_kube_config()
@@ -84,7 +82,7 @@ def parsevalue(textline):
 
     return float(parseddata[1])
 
-def parsename(textline)
+def parsename(textline):
     origdata = textline.strip('\n')
     if "}" in origdata:
         firstparse = origdata.split("}")
@@ -96,7 +94,7 @@ def parsename(textline)
     return str(parseddata)
 
 def gettargets(prom_host):
-    start = time.perf_counter()
+    start = time.process_time()
     prom_port = 30090
     prom_url = "http://" + str(prom_host) + ":" + \
                             str(prom_port) + "/api/v1/targets"
@@ -109,7 +107,7 @@ def gettargets(prom_host):
         if item["labels"]["job"] == "node-exporter":
             if item["labels"]["instance"] != nomaster:
                 scrapeurl.append(item["scrapeUrl"])
-    end = time.perf_counter()
+    end = time.process_time()
     timewriter("gettargets" + " " + str(end-start))
     return scrapeurl
 
@@ -126,23 +124,17 @@ def getmetrics(url):
     end = time.perf_counter()
     timewriter("getmetrics" + " " + str(end-start))
 
-async def fetch(link, session,number):
-    #try:
-    async with session.get(link) as response:
-        html_body = await response.text()
-        # for line in html_body.splitlines():
-        #     mergebyline(line)
-        # fname = "before" + str(number)
-        # f = open(fname, 'w')
-        # f.write(html_body)
-        # f.close
-        mergesametime(html_body)
-    #except:
-        #print("get metrics failed")
+async def fetch(link, session):
+    try:
+        async with session.get(link) as response:
+            html_body = await response.text()
+            mergesametime(html_body)
+    except:
+        logging.warning("Get metrics failed")
 
 async def asyncgetmetrics(links):
     async with ClientSession() as session:
-        tasks = [asyncio.create_task(fetch(link, session, links.index(link))) for link in links]  # 建立任務清單
+        tasks = [asyncio.create_task(fetch(link, session)) for link in links]  # 建立任務清單
         await asyncio.gather(*tasks)
 
 def mergebyline(line):
@@ -171,8 +163,6 @@ def mergebyline(line):
             maindict.setdefault(metricsname,[]).append(value)
 
 def mergesametime(html_body):
-    start = time.perf_counter()
-    #f = open(path, 'r')
     global maindict
     global checklist
     counterformetrics = 1
@@ -210,7 +200,7 @@ def mergesametime(html_body):
                 maindict[k].append(value)
             else:
                 maindict.setdefault(k,[]).append(value)
-    #.close()
+
 def merge(path,counter):
     start = time.perf_counter()
     f = open(path, 'r')
@@ -278,15 +268,23 @@ def merge(path,counter):
 
 def calcavg():
     start = time.perf_counter()
+    global averagemaindict
+    global cvmaindict
     for k in maindict.keys():
-        print(k,maindict[k],round(np.mean(maindict[k]),5)) #平均數
-        print(round(np.nan_to_num(round(np.std(maindict[k]),5)/round(np.mean(maindict[k]),5)),5)) #變異係數
+        averagemaindict[k]=round(np.mean(maindict[k]),5)
+        cvmaindict[k]=round((np.std(maindict[k])/averagemaindict[k]),5)
+        # averagemaindict[k]=np.mean(maindict[k])
+        # cvmaindict[k]=np.std(maindict[k])/averagemaindict[k]
+        if isnan(cvmaindict[k]):
+            cvmaindict[k]=0
     end = time.perf_counter()
     timewriter("calcavg" + " " + str(end-start))
 
 def rebuildfile(lastvaluefunction):
-    start = time.perf_counter()
+    start = time.process_time()
     global lastmaindict
+    global averagemaindict
+    global cvmaindict
     fname = "after"
     f = open(fname, 'w')
     tempmaindict = maindict.copy()
@@ -306,37 +304,40 @@ def rebuildfile(lastvaluefunction):
                     if lastmaindict:
                         if tempmaindict[k] != lastmaindict[k]:
                             if strtype == "counter":
-                                data = str(k) + " " + str(int(maindict[k]))
+                                data = str(k) + " " + str(int(averagemaindict[k])) + ":" + str(cvmaindict[k])
                                 listforremoveappend(k)
                             else:
-                                data = str(k) + " " + str(maindict[k])
+                                data = str(k) + " " + str(averagemaindict[k]) + ":" + str(cvmaindict[k])
                                 listforremoveappend(k)
                             if flag:
                                 f.write(line)
+                                f.write("\n")
                                 flag=0
                             f.write(data)
                             f.write("\n")
                     else:
                         if strtype == "counter":
-                            data = str(k) + " " + str(int(maindict[k]))
+                            data = str(k) + " " + str(int(averagemaindict[k])) + ":" + str(cvmaindict[k])
                             listforremoveappend(k)
                         else:
-                            data = str(k) + " " + str(maindict[k])
+                            data = str(k) + " " + str(averagemaindict[k]) + ":" + str(cvmaindict[k])
                             listforremoveappend(k)
                         if flag:
                             f.write(line)
+                            f.write("\n")
                             flag=0
                         f.write(data)
                         f.write("\n")
                 else:
                     if strtype == "counter":
-                        data = str(k) + " " + str(int(maindict[k]))
+                        data = str(k) + " " + str(int(averagemaindict[k])) + ":" + str(cvmaindict[k])
                         listforremoveappend(k)
                     else:
-                        data = str(k) + " " + str(maindict[k])
+                        data = str(k) + " " + str(averagemaindict[k]) + ":" + str(cvmaindict[k])
                         listforremoveappend(k)
                     if flag:
                         f.write(line)
+                        f.write("\n")
                         flag=0
                     f.write(data)
                     f.write("\n")
@@ -344,6 +345,7 @@ def rebuildfile(lastvaluefunction):
                 if strtype=="histogram":
                     if flag:
                         f.write(line)
+                        f.write("\n")
                         flag=0
                 if lastvaluefunction:
                     sethelp = parseforsethelp(line)
@@ -352,19 +354,19 @@ def rebuildfile(lastvaluefunction):
                             if lastmaindict:
                                 if tempmaindict[k] != lastmaindict[k]:
                                     if strtype == "counter":
-                                        data = str(k) + " " + str(int(maindict[k]))
+                                        data = str(k) + " " + str(int(averagemaindict[k])) + ":" + str(cvmaindict[k])
                                         listforremoveappend(k)
                                     else:
-                                        data = str(k) + " " + str(maindict[k])
+                                        data = str(k) + " " + str(averagemaindict[k]) + ":" + str(cvmaindict[k])
                                         listforremoveappend(k)
                                     f.write(data)
                                     f.write("\n")
                             else:
                                 if strtype == "counter":
-                                    data = str(k) + " " + str(int(maindict[k]))
+                                    data = str(k) + " " + str(int(averagemaindict[k])) + ":" + str(cvmaindict[k])
                                     listforremoveappend(k)
                                 else:
-                                    data = str(k) + " " + str(maindict[k])
+                                    data = str(k) + " " + str(averagemaindict[k]) + ":" + str(cvmaindict[k])
                                     listforremoveappend(k)
                                 f.write(data)
                                 f.write("\n")
@@ -373,10 +375,10 @@ def rebuildfile(lastvaluefunction):
                     if parseforsetkeys(k).issuperset(sethelp):
                         if mappingdict[k] not in checklist:
                             if strtype == "counter":
-                                data = str(k) + " " + str(int(maindict[k]))
+                                data = str(k) + " " + str(int(averagemaindict[k])) + ":" + str(cvmaindict[k])
                                 listforremoveappend(k)
                             else:
-                                data = str(k) + " " + str(maindict[k])
+                                data = str(k) + " " + str(averagemaindict[k]) + ":" + str(cvmaindict[k])
                                 listforremoveappend(k)
                         f.write(data)
                         f.write("\n")
@@ -385,16 +387,17 @@ def rebuildfile(lastvaluefunction):
         listforremove.clear()
     f.close
     lastmaindict=maindict.copy()
-    end = time.perf_counter()
+    end = time.process_time()
     timewriter("writetoafter"+ " "+ str(end-start))
 
 def initmemory():
-    start = time.perf_counter()
+    start = time.process_time()
     maindict.clear()
-    timesdict.clear()
     helplist.clear()
     checklist.clear()
-    end = time.perf_counter()
+    averagemaindict.clear()
+    cvmaindict.clear()
+    end = time.process_time()
     timewriter("cleardata" + " " + str(end-start))
 
 def compressfile():
@@ -405,39 +408,33 @@ def compressfile():
     timewriter("compressfile" + " " + str(end-start))
 
 if __name__ == "__main__":
-    perparestart = time.perf_counter()
-    prom_host=getControllerMasterIP()
-    scrapeurl=gettargets(prom_host)
-    lenoftarget=len(scrapeurl)
-    clv=1
+    perparestart = time.process_time()
+    scrapeurl=gettargets(getControllerMasterIP())
+    clv=0
     print(scrapeurl)
-    BUFFER_SIZE = 8192
+    BUFFER_SIZE = 16384
     HOST = '0.0.0.0'
     PORT = 54088
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind((HOST, PORT))
     server.listen(1)
-
-    perpareend = time.perf_counter()
+    perpareend = time.process_time()
     timewriter("perpare"+ " "+ str(perpareend - perparestart))
     while True:
         print("Server start")
         #conn, addr = server.accept()
         #clientMessage = str(conn.recv(1024), encoding='utf-8')
-        start = time.perf_counter()
+        start = time.process_time()
         loop = asyncio.get_event_loop()
         clientMessage="rntsm"
         if clientMessage == "rntsm":
             metricsstart = time.perf_counter()
             loop.run_until_complete(asyncgetmetrics(scrapeurl))
             metricsend = time.perf_counter()
-            print(metricsend-metricsstart)
             timewriter("getmetricsandmerge"+ " "+ str(metricsend-metricsstart))
-            # counter=0
-            # for number in range(lenoftarget):
-            #     name= "before" + str(number)
-            #     merge(name,counter)
-            #     counter+=1
+            calcavg()
+            rebuildfile(clv)
+            compressfile()
             print(maindict)
             initmemory()
             time.sleep(5)
@@ -479,5 +476,5 @@ if __name__ == "__main__":
         #             conn.sendall(bytes_read)
         #     end = time.perf_counter()
         #     conn.close()
-        #     timewriter("send"+ " " + str(end-sendstart))
+        #     timewriter("send"+ " " + str(end-sendstart))ex
         #     timewriter("total"+ " " + str(end-start))
