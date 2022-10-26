@@ -1,4 +1,3 @@
-from cmath import isnan
 from kubernetes import config
 import kubernetes.client
 import requests
@@ -10,7 +9,6 @@ import logging
 from aiohttp import ClientSession
 import asyncio
 import numpy as np
-import statistics
 
 
 timeout_seconds = 30
@@ -59,8 +57,11 @@ def parseforsethelp(textline):
     return set(smalldata)
 
 def parsefortstrkey(textline):
-    parseddata = textline.split("{")
-    return str(parseddata[0])
+    parsedata = textline.split("{")
+    if "{" in textline:
+        return str(parsedata[0]), str(parsedata[1])
+    else:
+        return str(parsedata[0])
 
 def parseforstrhelp(textline):
     origdata = textline.strip('\n')
@@ -202,7 +203,7 @@ def mergesametime(html_body):
                 maindict.setdefault(k,[]).append(value)
 
 def merge(path,counter):
-    start = time.perf_counter()
+    start = time.process_time()
     f = open(path, 'r')
     global maindict
     global timesdict
@@ -263,7 +264,7 @@ def merge(path,counter):
             #     if checksame==0:
             #         maindict.setdefault(metricsname,[]).append(value)
     # f.close()
-    end = time.perf_counter()
+    end = time.process_time()
     timewriter("merge" + " " + str(end-start))
 
 def calcavg():
@@ -275,7 +276,7 @@ def calcavg():
         cvmaindict[k]=round((np.std(maindict[k])/averagemaindict[k]),5)
         # averagemaindict[k]=np.mean(maindict[k])
         # cvmaindict[k]=np.std(maindict[k])/averagemaindict[k]
-        if isnan(cvmaindict[k]):
+        if np.isnan(cvmaindict[k]):
             cvmaindict[k]=0
     end = time.process_time()
     timewriter("calcavg" + " " + str(end-start))
@@ -285,6 +286,7 @@ def rebuildfile(lastvaluefunction):
     global lastmaindict
     global averagemaindict
     global cvmaindict
+    labeldict={}
     fname = "after"
     f = open(fname, 'w')
     tempmaindict = maindict.copy()
@@ -293,7 +295,10 @@ def rebuildfile(lastvaluefunction):
     listforremoveappend = listforremove.append
 
     for k in maindict.keys():
-        mappingdict[k]=parsefortstrkey(k)
+        if "{" in k:
+            mappingdict[k],labeldict[k]=parsefortstrkey(k)
+        else: 
+            mappingdict[k]=parsefortstrkey(k)
 
     for line in helplist:
         strtype, strhelp = parseforstrhelpANDtype(line)
@@ -304,10 +309,18 @@ def rebuildfile(lastvaluefunction):
                     if lastmaindict:
                         if tempmaindict[k] != lastmaindict[k]:
                             if strtype == "counter":
-                                data = str(k) + " " + str(int(averagemaindict[k])) + ":" + str(cvmaindict[k])
+                                data = str(k) + " " + str(int(averagemaindict[k]))
+                                if "{" in k:
+                                    datacv = str(mappingdict[k])+"_CV{"+str(labeldict[k])+ " " + str(cvmaindict[k])
+                                else:
+                                    datacv = str(mappingdict[k])+"_CV " + str(cvmaindict[k])
                                 listforremoveappend(k)
                             else:
-                                data = str(k) + " " + str(averagemaindict[k]) + ":" + str(cvmaindict[k])
+                                data = str(k) + " " + str(averagemaindict[k])
+                                if "{" in k:
+                                    datacv = str(mappingdict[k])+"_CV{"+str(labeldict[k])+ " " + str(cvmaindict[k])
+                                else:
+                                    datacv = str(mappingdict[k])+"_CV " + str(cvmaindict[k])
                                 listforremoveappend(k)
                             if flag:
                                 f.write(line)
@@ -315,12 +328,22 @@ def rebuildfile(lastvaluefunction):
                                 flag=0
                             f.write(data)
                             f.write("\n")
+                            f.write(datacv)
+                            f.write("\n")
                     else:
                         if strtype == "counter":
-                            data = str(k) + " " + str(int(averagemaindict[k])) + ":" + str(cvmaindict[k])
+                            data = str(k) + " " + str(int(averagemaindict[k]))
+                            if "{" in k:
+                                datacv = str(mappingdict[k])+"_CV{"+str(labeldict[k])+ " " + str(cvmaindict[k])
+                            else:
+                                datacv = str(mappingdict[k])+"_CV " + str(cvmaindict[k])
                             listforremoveappend(k)
                         else:
-                            data = str(k) + " " + str(averagemaindict[k]) + ":" + str(cvmaindict[k])
+                            data = str(k) + " " + str(averagemaindict[k])
+                            if "{" in k:
+                                datacv = str(mappingdict[k])+"_CV{"+str(labeldict[k])+ " " + str(cvmaindict[k])
+                            else:
+                                datacv = str(mappingdict[k])+"_CV " + str(cvmaindict[k])
                             listforremoveappend(k)
                         if flag:
                             f.write(line)
@@ -328,18 +351,30 @@ def rebuildfile(lastvaluefunction):
                             flag=0
                         f.write(data)
                         f.write("\n")
+                        f.write(datacv)
+                        f.write("\n")
                 else:
                     if strtype == "counter":
-                        data = str(k) + " " + str(int(averagemaindict[k])) + ":" + str(cvmaindict[k])
+                        data = str(k) + " " + str(int(averagemaindict[k]))
+                        if "{" in k:
+                            datacv = str(mappingdict[k])+"_CV{"+str(labeldict[k])+ " " + str(cvmaindict[k])
+                        else:
+                            datacv = str(mappingdict[k])+"_CV " + str(cvmaindict[k])
                         listforremoveappend(k)
                     else:
-                        data = str(k) + " " + str(averagemaindict[k]) + ":" + str(cvmaindict[k])
+                        data = str(k) + " " + str(averagemaindict[k])
+                        if "{" in k:
+                            datacv = str(mappingdict[k])+"_CV{"+str(labeldict[k])+ " " + str(cvmaindict[k])
+                        else:
+                            datacv = str(mappingdict[k])+"_CV " + str(cvmaindict[k])
                         listforremoveappend(k)
                     if flag:
                         f.write(line)
                         f.write("\n")
                         flag=0
                     f.write(data)
+                    f.write("\n")
+                    f.write(datacv)
                     f.write("\n")
             elif strtype == "summary" or strtype=="histogram":
                 if strtype=="histogram":
@@ -354,34 +389,65 @@ def rebuildfile(lastvaluefunction):
                             if lastmaindict:
                                 if tempmaindict[k] != lastmaindict[k]:
                                     if strtype == "counter":
-                                        data = str(k) + " " + str(int(averagemaindict[k])) + ":" + str(cvmaindict[k])
+                                        data = str(k) + " " + str(int(averagemaindict[k]))
+                                        if "{" in k:
+                                            datacv = str(mappingdict[k])+"_CV{"+str(labeldict[k])+ " " + str(cvmaindict[k])
+                                        else:
+                                            datacv = str(mappingdict[k])+"_CV " + str(cvmaindict[k])
                                         listforremoveappend(k)
                                     else:
-                                        data = str(k) + " " + str(averagemaindict[k]) + ":" + str(cvmaindict[k])
+                                        data = str(k) + " " + str(averagemaindict[k])
+                                        if "{" in k:
+                                            datacv = str(mappingdict[k])+"_CV{"+str(labeldict[k])+ " " + str(cvmaindict[k])
+                                        else:
+                                            datacv = str(mappingdict[k])+"_CV " + str(cvmaindict[k])
                                         listforremoveappend(k)
                                     f.write(data)
                                     f.write("\n")
+                                    f.write(datacv)
+                                    f.write("\n")
                             else:
                                 if strtype == "counter":
-                                    data = str(k) + " " + str(int(averagemaindict[k])) + ":" + str(cvmaindict[k])
+                                    data = str(k) + " " + str(int(averagemaindict[k]))
+                                    if "{" in k:
+                                        datacv = str(mappingdict[k])+"_CV{"+str(labeldict[k])+ " " + str(cvmaindict[k])
+                                    else:
+                                        datacv = str(mappingdict[k])+"_CV " + str(cvmaindict[k])
                                     listforremoveappend(k)
                                 else:
-                                    data = str(k) + " " + str(averagemaindict[k]) + ":" + str(cvmaindict[k])
+                                    data = str(k) + " " + str(averagemaindict[k])
+                                    if "{" in k:
+                                        datacv = str(mappingdict[k])+"_CV{"+str(labeldict[k])+ " " + str(cvmaindict[k])
+                                    else:
+                                        datacv = str(mappingdict[k])+"_CV " + str(cvmaindict[k])
                                     listforremoveappend(k)
                                 f.write(data)
+                                f.write("\n")
+                                f.write(datacv)
                                 f.write("\n")
                 else:
                     sethelp = parseforsethelp(line)
                     if parseforsetkeys(k).issuperset(sethelp):
                         if mappingdict[k] not in checklist:
                             if strtype == "counter":
-                                data = str(k) + " " + str(int(averagemaindict[k])) + ":" + str(cvmaindict[k])
+                                data = str(k) + " " + str(int(averagemaindict[k]))
+                                if "{" in k:
+                                    datacv = str(mappingdict[k])+"_CV{"+str(labeldict[k])+ " " + str(cvmaindict[k])
+                                else:
+                                    datacv = str(mappingdict[k])+"_CV " + str(cvmaindict[k])
                                 listforremoveappend(k)
                             else:
-                                data = str(k) + " " + str(averagemaindict[k]) + ":" + str(cvmaindict[k])
+                                data = str(k) + " " + str(averagemaindict[k])
+                                if "{" in k:
+                                    datacv = str(mappingdict[k])+"_CV{"+str(labeldict[k])+ " " + str(cvmaindict[k])
+                                else:
+                                    datacv = str(mappingdict[k])+"_CV " + str(cvmaindict[k])
                                 listforremoveappend(k)
                         f.write(data)
                         f.write("\n")
+                        f.write(datacv)
+                        f.write("\n")
+       
         for items in listforremove:
             tempmaindict.pop(items)
         listforremove.clear()
@@ -427,6 +493,7 @@ if __name__ == "__main__":
         conn, addr = server.accept()
         clientMessage = str(conn.recv(1024), encoding='utf-8')
         start = time.process_time()
+        clientMessage="acala"
         if clientMessage == "acala":
             metricsstart = time.process_time()
             loop.run_until_complete(asyncgetmetrics(scrapeurl))
@@ -436,7 +503,6 @@ if __name__ == "__main__":
             rebuildfile(clv)
             compressfile()
             initmemory()
-            time.sleep(5)
             sendstart = time.process_time()
             with open("after.gz", "rb") as f:
                 while True:
@@ -458,14 +524,14 @@ if __name__ == "__main__":
             rebuildfile(clv)
             compressfile()
             initmemory()
-            sendstart = time.perf_counter()
+            sendstart = time.process_time()
             with open("after.gz", "rb") as f:
                 while True:
                     bytes_read = f.read(BUFFER_SIZE)
                     if not bytes_read:
                         break
                     conn.sendall(bytes_read)
-            end = time.perf_counter()
+            end = time.process_time()
             conn.close()
-            timewriter("send"+ " " + str(end-sendstart))ex
+            timewriter("send"+ " " + str(end-sendstart))
             timewriter("total"+ " " + str(end-start))

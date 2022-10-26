@@ -63,7 +63,7 @@ def posttogateway(clustername,instance, name):
     gateway_host="127.0.0.1"
     gateway_port="9091"
     url = "http://" + str(gateway_host) + ":" + str(gateway_port) + "/metrics/job/" + clustername + "/instance/" + instance
-    res = requests.post(url=url,data=open(name, 'rb'),headers={'Content-Type': 'application/octet-stream'})
+    res = requests.post(url=url,data=name,headers={'Content-Type': 'application/octet-stream'})
     end = time.perf_counter()
     timewriter("posttogateway" + " " + str(end-start))
 
@@ -172,26 +172,23 @@ def modifyconfig():
 async def fetch(link, clientMessage, number):
     print('Send: %r' % clientMessage)
     transtimestart = time.perf_counter()
-    reader, writer = await asyncio.open_connection(link, 31580)
+    #reader, writer = await asyncio.open_connection(link, 31580)
+    reader, writer = await asyncio.open_connection(link, 54088)
     writer.write(clientMessage.encode())
     #client.sendall(clientMessage.encode())
-    fname = "after" + str(number) + ".gz"
-    with open(fname, "wb") as f:
-        while True:
-            bytes_read = await reader.read(BUFFER_SIZE)
-            if not bytes_read:    
-                break
-            f.write(bytes_read)
-            writer.close()
-    name= "after" + str(number)+".gz"
-    nameup="after"+ str(number)
+    while True:
+        bytes_read = await reader.read(BUFFER_SIZE)
+        if not bytes_read:    
+            break
+        metrics = gzip.decompress(bytes_read)
+        writer.close()
+
+    print(metrics,type(metrics))
     transtimeend = time.perf_counter()
-    timewriter("scrape" + " " + str(transtimeend-transtimestart))
-    decompressfile(name,nameup)
-    whichone=number+1
-    clustername="cluster"+str(whichone)
+    timewriter("scrapeanddecompress" + " " + str(transtimeend-transtimestart))
+    clustername="cluster"+str(number+1)
     try:
-        posttogateway(clustername,ipdict[clustername],nameup)
+        posttogateway(clustername,ipdict[clustername],metrics)
     except:
         print("post-fail")
         return "post-fail"
@@ -202,22 +199,22 @@ async def tcp_echo_client(links,clientMessage):
     try:
         fail=await asyncio.gather(*tasks)
         if fail[0]=="post-fail":
-            return "rntsm:1"
+            return "acala:1"
         else:
-            return "rntsm"
+            return "acala"
     except:
         print("oneofthem-fail")    
-        return "rntsm"
+        return "acala"
 
 if __name__ == "__main__":
     perparestart = time.perf_counter()
     minlevel, timemax, maxlevel, timemin=20,60,40,5
     read_member_cluster()
     getformule(minlevel, timemax, maxlevel, timemin)
-    BUFFER_SIZE=8192
+    BUFFER_SIZE=16324
     perpareend = time.perf_counter()
     timewriter("perpare" + " " + str(perpareend-perparestart))
-    clientMessage = "rntsm:1"
+    clientMessage = "acala:1"
     loop = asyncio.get_event_loop()
     while True:
         print(clientMessage)
