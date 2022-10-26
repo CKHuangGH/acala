@@ -376,83 +376,84 @@ def rebuildfile(lastvaluefunction):
                     f.write("\n")
                     f.write(datacv)
                     f.write("\n")
-            elif strtype == "summary" or strtype=="histogram":
-                if strtype=="histogram":
-                    if flag:
-                        f.write(line)
-                        f.write("\n")
-                        flag=0
-                if lastvaluefunction:
-                    sethelp = parseforsethelp(line)
-                    if parseforsetkeys(k).issuperset(sethelp):
-                        if mappingdict[k] not in checklist:
-                            if lastmaindict:
-                                if tempmaindict[k] != lastmaindict[k]:
-                                    if strtype == "counter":
-                                        data = str(k) + " " + str(int(averagemaindict[k]))
-                                        if "{" in k:
-                                            datacv = str(mappingdict[k])+"_CV{"+str(labeldict[k])+ " " + str(cvmaindict[k])
-                                        else:
-                                            datacv = str(mappingdict[k])+"_CV " + str(cvmaindict[k])
-                                        listforremoveappend(k)
-                                    else:
-                                        data = str(k) + " " + str(averagemaindict[k])
-                                        if "{" in k:
-                                            datacv = str(mappingdict[k])+"_CV{"+str(labeldict[k])+ " " + str(cvmaindict[k])
-                                        else:
-                                            datacv = str(mappingdict[k])+"_CV " + str(cvmaindict[k])
-                                        listforremoveappend(k)
-                                    f.write(data)
-                                    f.write("\n")
-                                    f.write(datacv)
-                                    f.write("\n")
-                            else:
-                                if strtype == "counter":
-                                    data = str(k) + " " + str(int(averagemaindict[k]))
-                                    if "{" in k:
-                                        datacv = str(mappingdict[k])+"_CV{"+str(labeldict[k])+ " " + str(cvmaindict[k])
-                                    else:
-                                        datacv = str(mappingdict[k])+"_CV " + str(cvmaindict[k])
-                                    listforremoveappend(k)
-                                else:
-                                    data = str(k) + " " + str(averagemaindict[k])
-                                    if "{" in k:
-                                        datacv = str(mappingdict[k])+"_CV{"+str(labeldict[k])+ " " + str(cvmaindict[k])
-                                    else:
-                                        datacv = str(mappingdict[k])+"_CV " + str(cvmaindict[k])
-                                    listforremoveappend(k)
-                                f.write(data)
-                                f.write("\n")
-                                f.write(datacv)
-                                f.write("\n")
-                else:
-                    sethelp = parseforsethelp(line)
-                    if parseforsetkeys(k).issuperset(sethelp):
-                        if mappingdict[k] not in checklist:
-                            if strtype == "counter":
-                                data = str(k) + " " + str(int(averagemaindict[k]))
-                                if "{" in k:
-                                    datacv = str(mappingdict[k])+"_CV{"+str(labeldict[k])+ " " + str(cvmaindict[k])
-                                else:
-                                    datacv = str(mappingdict[k])+"_CV " + str(cvmaindict[k])
-                                listforremoveappend(k)
-                            else:
-                                data = str(k) + " " + str(averagemaindict[k])
-                                if "{" in k:
-                                    datacv = str(mappingdict[k])+"_CV{"+str(labeldict[k])+ " " + str(cvmaindict[k])
-                                else:
-                                    datacv = str(mappingdict[k])+"_CV " + str(cvmaindict[k])
-                                listforremoveappend(k)
-                        f.write(data)
-                        f.write("\n")
-                        f.write(datacv)
-                        f.write("\n")
+            # elif strtype == "summary" or strtype=="histogram":
+            #     if strtype=="histogram":
+            #         if flag:
+            #             f.write(line)
+            #             f.write("\n")
+            #             flag=0
+            #     if lastvaluefunction:
+            #         sethelp = parseforsethelp(line)
+            #         if parseforsetkeys(k).issuperset(sethelp):
+            #             if mappingdict[k] not in checklist:
+            #                 if lastmaindict:
+            #                     if tempmaindict[k] != lastmaindict[k]:
+            #                         if strtype == "counter":
+            #                             data = str(k) + " " + str(int(averagemaindict[k]))
+            #                             if "{" in k:
+            #                                 datacv = str(mappingdict[k])+"_CV{"+str(labeldict[k])+ " " + str(cvmaindict[k])
+            #                             else:
+            #                                 datacv = str(mappingdict[k])+"_CV " + str(cvmaindict[k])
+            #                             listforremoveappend(k)
+            #                         else:
+            #                             data = str(k) + " " + str(averagemaindict[k])
+            #                             if "{" in k:
+            #                                 datacv = str(mappingdict[k])+"_CV{"+str(labeldict[k])+ " " + str(cvmaindict[k])
+            #                             else:
+            #                                 datacv = str(mappingdict[k])+"_CV " + str(cvmaindict[k])
+            #                             listforremoveappend(k)
+            #                         f.write(data)
+            #                         f.write("\n")
+            #                         f.write(datacv)
+            #                         f.write("\n")
+            #                 else:
+            #                     if strtype == "counter":
+            #                         data = str(k) + " " + str(int(averagemaindict[k]))
+            #                         if "{" in k:
+            #                             datacv = str(mappingdict[k])+"_CV{"+str(labeldict[k])+ " " + str(cvmaindict[k])
+            #                         else:
+            #                             datacv = str(mappingdict[k])+"_CV " + str(cvmaindict[k])
+            #                         listforremoveappend(k)
+            #                     else:
+            #                         data = str(k) + " " + str(averagemaindict[k])
+            #                         if "{" in k:
+            #                             datacv = str(mappingdict[k])+"_CV{"+str(labeldict[k])+ " " + str(cvmaindict[k])
+            #                         else:
+            #                             datacv = str(mappingdict[k])+"_CV " + str(cvmaindict[k])
+            #                         listforremoveappend(k)
+            #                     f.write(data)
+            #                     f.write("\n")
+            #                     f.write(datacv)
+            #                     f.write("\n")
+            #     else:
+            #         sethelp = parseforsethelp(line)
+            #         if parseforsetkeys(k).issuperset(sethelp):
+            #             if mappingdict[k] not in checklist:
+            #                 if strtype == "counter":
+            #                     data = str(k) + " " + str(int(averagemaindict[k]))
+            #                     if "{" in k:
+            #                         datacv = str(mappingdict[k])+"_CV{"+str(labeldict[k])+ " " + str(cvmaindict[k])
+            #                     else:
+            #                         datacv = str(mappingdict[k])+"_CV " + str(cvmaindict[k])
+            #                     listforremoveappend(k)
+            #                 else:
+            #                     data = str(k) + " " + str(averagemaindict[k])
+            #                     if "{" in k:
+            #                         datacv = str(mappingdict[k])+"_CV{"+str(labeldict[k])+ " " + str(cvmaindict[k])
+            #                     else:
+            #                         datacv = str(mappingdict[k])+"_CV " + str(cvmaindict[k])
+            #                     listforremoveappend(k)
+            #             f.write(data)
+            #             f.write("\n")
+            #             f.write(datacv)
+            #             f.write("\n")
        
         for items in listforremove:
             tempmaindict.pop(items)
         listforremove.clear()
     f.close
-    lastmaindict=maindict.copy()
+    if lastvaluefunction:
+        lastmaindict=maindict.copy()
     end = time.process_time()
     timewriter("writetoafter"+ " "+ str(end-start))
 
@@ -476,7 +477,7 @@ def compressfile():
 if __name__ == "__main__":
     perparestart = time.process_time()
     scrapeurl=gettargets(getControllerMasterIP())
-    clv=1
+    clv=0
 
     BUFFER_SIZE = 16384
     HOST = '0.0.0.0'
@@ -484,16 +485,14 @@ if __name__ == "__main__":
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind((HOST, PORT))
     server.listen(1)
-
+    loop = asyncio.get_event_loop()
     perpareend = time.process_time()
     timewriter("perpare"+ " "+ str(perpareend - perparestart))
-    loop = asyncio.get_event_loop()
     while True:
         print("Server start")
         conn, addr = server.accept()
         clientMessage = str(conn.recv(1024), encoding='utf-8')
         start = time.process_time()
-        clientMessage="acala"
         if clientMessage == "acala":
             metricsstart = time.process_time()
             loop.run_until_complete(asyncgetmetrics(scrapeurl))
@@ -510,8 +509,8 @@ if __name__ == "__main__":
                     if not bytes_read:
                         break
                     conn.sendall(bytes_read)
-            end = time.process_time()
             conn.close()
+            end = time.process_time()
             timewriter("send"+ " " + str(end-sendstart))
             timewriter("total"+ " " + str(end-start))
         elif clientMessage == "acala:1":
@@ -531,7 +530,7 @@ if __name__ == "__main__":
                     if not bytes_read:
                         break
                     conn.sendall(bytes_read)
-            end = time.process_time()
             conn.close()
+            end = time.process_time()
             timewriter("send"+ " " + str(end-sendstart))
             timewriter("total"+ " " + str(end-start))

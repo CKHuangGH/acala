@@ -1,8 +1,8 @@
-import socket
+
 import gzip
 import time
 import shutil
-import requests
+from requests import post
 from prometheus_api_client import PrometheusConnect
 from kubernetes import client, config
 import kubernetes.client
@@ -63,7 +63,7 @@ def posttogateway(clustername,instance, name):
     gateway_host="127.0.0.1"
     gateway_port="9091"
     url = "http://" + str(gateway_host) + ":" + str(gateway_port) + "/metrics/job/" + clustername + "/instance/" + instance
-    res = requests.post(url=url,data=name,headers={'Content-Type': 'application/octet-stream'})
+    res = post(url=url,data=name,headers={'Content-Type': 'application/octet-stream'})
     end = time.perf_counter()
     timewriter("posttogateway" + " " + str(end-start))
 
@@ -183,7 +183,7 @@ async def fetch(link, clientMessage, number):
         metrics = gzip.decompress(bytes_read)
         writer.close()
 
-    print(metrics,type(metrics))
+    #print(metrics,type(metrics))
     transtimeend = time.perf_counter()
     timewriter("scrapeanddecompress" + " " + str(transtimeend-transtimestart))
     clustername="cluster"+str(number+1)
