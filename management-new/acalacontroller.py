@@ -211,6 +211,7 @@ if __name__ == "__main__":
     read_member_cluster()
     #getformule(minlevel, timemax, maxlevel, timemin)
     clientMessage = "acala:1"
+    BUFFER_SIZE=16384
     perpareend = time.process_time()
     timewriter("perpare" + " " + str(perpareend-perparestart))
     loop = asyncio.get_event_loop()
