@@ -272,10 +272,10 @@ def calcavg():
     global averagemaindict
     global cvmaindict
     for k in maindict.keys():
-        averagemaindict[k]=round(np.mean(maindict[k]),5)
-        cvmaindict[k]=round((np.std(maindict[k])/averagemaindict[k]),5)
-        # averagemaindict[k]=np.mean(maindict[k])
-        # cvmaindict[k]=np.std(maindict[k])/averagemaindict[k]
+        # averagemaindict[k]=round(np.mean(maindict[k]),5)
+        # cvmaindict[k]=round((np.std(maindict[k])/averagemaindict[k]),5)
+        averagemaindict[k]=np.mean(maindict[k])
+        cvmaindict[k]=np.std(maindict[k])/averagemaindict[k]
         if np.isnan(cvmaindict[k]):
             cvmaindict[k]=0
     end = time.process_time()
