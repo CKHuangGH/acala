@@ -72,15 +72,14 @@ def read_member_cluster():
 async def fetch(link, clientMessage, number):
     print('Send: %r' % clientMessage)
     transtimestart = time.perf_counter()
-    #reader, writer = await asyncio.open_connection(link, 31580)
-    reader, writer = await asyncio.open_connection(link, 54088)
+    reader, writer = await asyncio.open_connection(link, 31580)
+    #reader, writer = await asyncio.open_connection(link, 54088)
     writer.write(clientMessage.encode())
     while True:
         bytes_read = await reader.read(BUFFER_SIZE)
         if not bytes_read:    
             break
-        metrics = gzip.decompress(bytes_read)
-        
+    metrics = gzip.decompress(bytes_read)
     writer.close()
     clustername="cluster"+str(number+1)
     transtimeend = time.perf_counter()
