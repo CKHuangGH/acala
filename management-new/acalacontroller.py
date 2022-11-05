@@ -1,15 +1,10 @@
-
 import gzip
 import time
 from requests import post
-from prometheus_api_client import PrometheusConnect
 from kubernetes import config
 import kubernetes.client
-import base64
-import yaml
 import logging
 import asyncio
-
 
 ipdict={}
 portdict={}
@@ -18,6 +13,7 @@ resources = {}
 scrapetime = {}
 scrapelist=[]
 timeout_seconds = 30
+
 logging.basicConfig(level=logging.INFO)
 
 def getControllerMasterIP():
@@ -45,7 +41,6 @@ def timewriter(text):
     except:
         print("Write error")
 
-
 def posttogateway(clustername,instance, name):
     start = time.perf_counter()
     gateway_host="127.0.0.1"
@@ -72,14 +67,19 @@ def read_member_cluster():
 async def fetch(link, clientMessage, number):
     print('Send: %r' % clientMessage)
     transtimestart = time.perf_counter()
-    reader, writer = await asyncio.open_connection(link, 31580)
-    #reader, writer = await asyncio.open_connection(link, 54088)
+    #reader, writer = await asyncio.open_connection(link, 31580)
+    reader, writer = await asyncio.open_connection(link, 54088)
     writer.write(clientMessage.encode())
+    
+    rawmetrics = bytearray()
     while True:
         bytes_read = await reader.read(BUFFER_SIZE)
-        if not bytes_read:    
+        if not bytes_read:
             break
-    metrics = gzip.decompress(bytes_read)
+        rawmetrics += bytes_read
+
+    metrics = gzip.decompress(rawmetrics)
+    print(metrics)
     writer.close()
     clustername="cluster"+str(number+1)
     transtimeend = time.perf_counter()
@@ -106,7 +106,7 @@ if __name__ == "__main__":
     perparestart = time.perf_counter()
     read_member_cluster()
     clientMessage = "acala:1"
-    BUFFER_SIZE=16324
+    BUFFER_SIZE=8192
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     perpareend = time.perf_counter()
