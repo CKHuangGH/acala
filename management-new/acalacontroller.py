@@ -67,8 +67,8 @@ def read_member_cluster():
 async def fetch(link, clientMessage, number):
     print('Send: %r' % clientMessage)
     transtimestart = time.perf_counter()
-    #reader, writer = await asyncio.open_connection(link, 31580)
-    reader, writer = await asyncio.open_connection(link, 54088)
+    reader, writer = await asyncio.open_connection(link, 31580)
+    #reader, writer = await asyncio.open_connection(link, 54088)
     writer.write(clientMessage.encode())
     
     rawmetrics = bytearray()
@@ -79,7 +79,6 @@ async def fetch(link, clientMessage, number):
         rawmetrics += bytes_read
 
     metrics = gzip.decompress(rawmetrics)
-    print(metrics)
     writer.close()
     clustername="cluster"+str(number+1)
     transtimeend = time.perf_counter()
@@ -106,7 +105,7 @@ if __name__ == "__main__":
     perparestart = time.perf_counter()
     read_member_cluster()
     clientMessage = "acala:1"
-    BUFFER_SIZE=8192
+    BUFFER_SIZE=16324
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     perpareend = time.perf_counter()
