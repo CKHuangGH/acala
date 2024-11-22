@@ -173,8 +173,8 @@ def rebuildfile(lastvaluefunction):
     global averagemaindict
     global cvmaindict
     labeldict={}
-    
-    #tempmaindict = maindict.copy()
+    print(lastmaindict,maindict)
+    tempmaindict = maindict.copy()
     mappingdict={}
     listforremove = []
     listforremoveappend = listforremove.append
@@ -190,7 +190,7 @@ def rebuildfile(lastvaluefunction):
     for line in helplist:
         strtype, strhelp = parseforstrhelpANDtype(line)
         flag=1
-        for k in maindict.keys():
+        for k in tempmaindict.keys():
             if strhelp == mappingdict[k]:
                 if lastvaluefunction:
                     if lastmaindict:
@@ -256,7 +256,7 @@ def rebuildfile(lastvaluefunction):
                     f.write(datacv+"\n")
 
         for items in listforremove:
-            maindict.pop(items)
+            tempmaindict.pop(items)
         listforremove.clear()
     f.close
     if lastvaluefunction:
@@ -297,49 +297,60 @@ if __name__ == "__main__":
 
     perpareend = time.perf_counter()
     timewriter("perpare"+ " "+ str(perpareend - perparestart))
+
     while True:
-        print("Server start")
-        conn, addr = server.accept()
-        clientMessage = str(conn.recv(1024), encoding='utf-8')
-        start = time.perf_counter()
-        if clientMessage == "acala":
-            metricsstart = time.perf_counter()
-            loop.run_until_complete(asyncgetmetrics(scrapeurl))
-            metricsend = time.perf_counter()
-            timewriter("getmetricsandmerge"+ " "+ str(metricsend-metricsstart))
-            calcavg()
-            rebuildfile(clv)
-            compressfile()
-            initmemory()
-            sendstart = time.perf_counter()
-            with open("after.gz", "rb") as f:
-                while True:
-                    bytes_read = f.read(BUFFER_SIZE)
-                    if not bytes_read:
-                        break
-                    conn.sendall(bytes_read)
-            conn.close()
-            end = time.perf_counter()
-            timewriter("send"+ " " + str(end-sendstart))
-            timewriter("total"+ " " + str(end-start))
-        elif clientMessage == "acala:1":
-            lastmaindict.clear()
-            metricsstart = time.perf_counter()
-            loop.run_until_complete(asyncgetmetrics(scrapeurl))
-            metricsend = time.perf_counter()
-            timewriter("getmetricsandmerge"+ " "+ str(metricsend-metricsstart))
-            calcavg()
-            rebuildfile(clv)
-            compressfile()
-            initmemory()
-            sendstart = time.perf_counter()
-            with open("after.gz", "rb") as f:
-                while True:
-                    bytes_read = f.read(BUFFER_SIZE)
-                    if not bytes_read:
-                        break
-                    conn.sendall(bytes_read)
-            conn.close()
-            end = time.perf_counter()
-            timewriter("send"+ " " + str(end-sendstart))
-            timewriter("total"+ " " + str(end-start))
+        loop.run_until_complete(asyncgetmetrics(scrapeurl))
+        calcavg()
+        rebuildfile(clv)
+        compressfile()
+        initmemory()
+        time.sleep(10)
+        print("1")
+    
+
+    # while True:
+    #     print("Server start")
+    #     conn, addr = server.accept()
+    #     clientMessage = str(conn.recv(1024), encoding='utf-8')
+    #     start = time.perf_counter()
+    #     if clientMessage == "acala":
+    #         metricsstart = time.perf_counter()
+    #         loop.run_until_complete(asyncgetmetrics(scrapeurl))
+    #         metricsend = time.perf_counter()
+    #         timewriter("getmetricsandmerge"+ " "+ str(metricsend-metricsstart))
+    #         calcavg()
+    #         rebuildfile(clv)
+    #         compressfile()
+    #         initmemory()
+    #         sendstart = time.perf_counter()
+    #         with open("after.gz", "rb") as f:
+    #             while True:
+    #                 bytes_read = f.read(BUFFER_SIZE)
+    #                 if not bytes_read:
+    #                     break
+    #                 conn.sendall(bytes_read)
+    #         conn.close()
+    #         end = time.perf_counter()
+    #         timewriter("send"+ " " + str(end-sendstart))
+    #         timewriter("total"+ " " + str(end-start))
+    #     elif clientMessage == "acala:1":
+    #         lastmaindict.clear()
+    #         metricsstart = time.perf_counter()
+    #         loop.run_until_complete(asyncgetmetrics(scrapeurl))
+    #         metricsend = time.perf_counter()
+    #         timewriter("getmetricsandmerge"+ " "+ str(metricsend-metricsstart))
+    #         calcavg()
+    #         rebuildfile(clv)
+    #         compressfile()
+    #         initmemory()
+    #         sendstart = time.perf_counter()
+    #         with open("after.gz", "rb") as f:
+    #             while True:
+    #                 bytes_read = f.read(BUFFER_SIZE)
+    #                 if not bytes_read:
+    #                     break
+    #                 conn.sendall(bytes_read)
+    #         conn.close()
+    #         end = time.perf_counter()
+    #         timewriter("send"+ " " + str(end-sendstart))
+    #         timewriter("total"+ " " + str(end-start))
