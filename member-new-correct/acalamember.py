@@ -112,6 +112,7 @@ async def fetch(link, session):
     try:
         async with session.get(link) as response:
             html_body = await response.text()
+            print(link)
             mergesametime(html_body)
     except:
         print("Get metrics failed")
@@ -173,7 +174,7 @@ def rebuildfile(lastvaluefunction):
     global averagemaindict
     global cvmaindict
     labeldict={}
-    print(lastmaindict,maindict)
+    # print(lastmaindict,maindict)
     tempmaindict = maindict.copy()
     mappingdict={}
     listforremove = []
@@ -284,7 +285,7 @@ if __name__ == "__main__":
     perparestart = time.perf_counter()
     scrapeurl=gettargets(getControllerMasterIP())
     clv=1
-
+    # print(scrapeurl)
     BUFFER_SIZE = 16384
     HOST = '0.0.0.0'
     PORT = 54088
