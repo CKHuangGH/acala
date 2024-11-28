@@ -196,8 +196,7 @@ def rebuildfile(lastvaluefunction):
             if strhelp == mappingdict[k]:
                 if lastvaluefunction:
                     if lastcv and lastaverage:
-                        print(lastcv[k],cvmaindict[k],lastaverage[k],averagemaindict[k])
-                        if lastcv[k] != cvmaindict[k] and lastaverage[k] != averagemaindict[k]:
+                        if lastcv[k] != cvmaindict[k] or lastaverage[k] != averagemaindict[k]:
                             if strtype == "counter":
                                 data = str(k) + " " + str(int(averagemaindict[k]))
                                 if "{" in k:
@@ -263,8 +262,8 @@ def rebuildfile(lastvaluefunction):
         listforremove.clear()
     f.close
     if lastvaluefunction:
-        lastcv=cvmaindict
-        lastaverage=averagemaindict
+        lastcv=cvmaindict.copy()
+        lastaverage=averagemaindict.copy()
     end = time.perf_counter()
     timewriter("writetoafter"+ " "+ str(end-start))
 
@@ -312,7 +311,7 @@ if __name__ == "__main__":
         rebuildfile(clv)
         compressfile()
         initmemory()
-        time.sleep(30)
+        time.sleep(10)
 
 
 
